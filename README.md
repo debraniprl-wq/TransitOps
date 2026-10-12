@@ -1,6 +1,6 @@
 # 🚍 TransitOps — Smart Transport Operations Platform
 
-![TransitOps Dashboard](screenshots/dashboard.png)
+![TransitOps Dashboard](transit-ops-dashboard.png)
 
 A modern Smart Transport Operations Platform designed to help organizations manage fleet vehicles, drivers, trip dispatch, vehicle maintenance, fuel expenses, and operational performance through a centralized dashboard.
 
@@ -133,8 +133,6 @@ TransitOps aims to help organizations:
 **Agnimitra Dey**
 
 GitHub: https://github.com/debraniprl-wq
-
-*Transforming transport operations, one journey at a time*
 
 ---
 
