@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   BarChart3,
   Download,
+  Printer,
   Calendar,
   Filter,
   RefreshCw,
@@ -18,7 +19,7 @@ import {
 } from 'lucide-react';
 import { AppShell } from '@/components/layout/AppShell';
 import { DataProvider } from '@/lib/data-provider';
-import { computeFleetAnalytics, exportToCSV, FleetReportData } from '@/lib/calculations';
+import { computeFleetAnalytics, exportToCSV, exportToPrintOrPDF, FleetReportData } from '@/lib/calculations';
 import { useToast } from '@/components/ui/Toast';
 import { Vehicle, Trip, MaintenanceRecord, FuelLog, Expense } from '@/types';
 
@@ -99,7 +100,42 @@ export default function ReportsPage() {
     ]);
 
     exportToCSV('TransitOps_Fleet_ROI_Performance', headers, rows);
-    showToast('Analytics & ROI CSV report downloaded', 'success');
+    showToast('Analytics & ROI CSV report exported (open with Excel / Sheets)', 'success');
+  };
+
+  const handleExportPDF = () => {
+    if (!analytics) return;
+
+    const headers = [
+      'Vehicle Reg',
+      'Model',
+      'Distance (km)',
+      'Fuel (L)',
+      'Efficiency (km/L)',
+      'Fuel Cost ($)',
+      'Maint Cost ($)',
+      'Revenue ($)',
+      'Net Profit ($)',
+      'Acquisition ($)',
+      'ROI (%)',
+    ];
+
+    const rows = analytics.vehicleReports.map((vr) => [
+      vr.regNumber,
+      vr.model,
+      vr.distanceKm.toLocaleString(),
+      vr.fuelLitres.toLocaleString(),
+      vr.fuelEfficiency.toFixed(2),
+      `$${vr.fuelCost.toLocaleString()}`,
+      `$${vr.maintenanceCost.toLocaleString()}`,
+      `$${vr.revenue.toLocaleString()}`,
+      `$${vr.netProfit.toLocaleString()}`,
+      `$${vr.acquisitionCost.toLocaleString()}`,
+      `${vr.roiPercent}%`,
+    ]);
+
+    exportToPrintOrPDF('Fleet Financial & ROI Performance Report', headers, rows);
+    showToast('Opened printable report (Save as PDF)', 'success');
   };
 
   return (
@@ -132,10 +168,19 @@ export default function ReportsPage() {
 
           <button
             onClick={handleExportCSV}
+            title="Download CSV spreadsheet file (for Excel / Google Sheets)"
+            className="px-3 py-2 bg-[#FFFEFA] border border-[#E2DDD1] hover:bg-[#F5F2E9] text-[#193C49] text-xs font-medium rounded-lg flex items-center gap-1.5 transition-colors shadow-xs"
+          >
+            <Download className="w-3.5 h-3.5 text-[#71818A]" />
+            <span>Export CSV</span>
+          </button>
+          <button
+            onClick={handleExportPDF}
+            title="Open Printable Report / Save as PDF (for Adobe Acrobat / Print)"
             className="px-3.5 py-2 bg-[#23866D] hover:bg-[#1D735D] text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 shadow-xs transition-colors"
           >
-            <Download className="w-4 h-4" />
-            <span>Download CSV Report</span>
+            <Printer className="w-4 h-4" />
+            <span>PDF / Print</span>
           </button>
         </div>
       </div>

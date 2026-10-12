@@ -9,6 +9,7 @@ import {
   Filter,
   ArrowUpDown,
   Download,
+  Printer,
   RefreshCw,
   Trash2,
   DollarSign,
@@ -20,7 +21,7 @@ import { Modal } from '@/components/ui/Modal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useToast } from '@/components/ui/Toast';
 import { DataProvider } from '@/lib/data-provider';
-import { exportToCSV } from '@/lib/calculations';
+import { exportToCSV, exportToPrintOrPDF } from '@/lib/calculations';
 import { FuelLog, Expense, ExpenseCategory, Vehicle } from '@/types';
 
 export default function ExpensesPage() {
@@ -194,7 +195,7 @@ export default function ExpensesPage() {
         f.notes || '',
       ]);
       exportToCSV('TransitOps_Fuel_Logs', headers, rows);
-      showToast('Fuel logs exported to CSV', 'success');
+      showToast('Fuel logs exported to CSV (open with Excel / Sheets)', 'success');
     } else {
       const headers = ['Category', 'Vehicle Reg', 'Date', 'Amount ($)', 'Description'];
       const rows = filteredExpenses.map((e) => [
@@ -205,7 +206,35 @@ export default function ExpensesPage() {
         e.description,
       ]);
       exportToCSV('TransitOps_Expenses_Logs', headers, rows);
-      showToast('Expenses exported to CSV', 'success');
+      showToast('Expenses exported to CSV (open with Excel / Sheets)', 'success');
+    }
+  };
+
+  const handleExportPDF = () => {
+    if (activeTab === 'fuel') {
+      const headers = ['Vehicle Reg', 'Date', 'Litres', 'Price/L ($)', 'Total Cost ($)', 'Odometer (km)', 'Notes'];
+      const rows = filteredFuelLogs.map((f) => [
+        f.vehicle ? f.vehicle.reg_number : '',
+        f.date,
+        f.litres.toLocaleString(),
+        `$${f.price_per_litre.toFixed(2)}`,
+        `$${f.total_cost.toLocaleString()}`,
+        f.odometer_reading.toLocaleString(),
+        f.notes || '—',
+      ]);
+      exportToPrintOrPDF('Fuel Fill & Consumption Telemetry', headers, rows);
+      showToast('Opened printable report (Save as PDF)', 'success');
+    } else {
+      const headers = ['Category', 'Vehicle Reg', 'Date', 'Amount ($)', 'Description'];
+      const rows = filteredExpenses.map((e) => [
+        e.category,
+        e.vehicle ? e.vehicle.reg_number : 'Fleet-Wide',
+        e.date,
+        `$${e.amount.toLocaleString()}`,
+        e.description,
+      ]);
+      exportToPrintOrPDF('Operating Expenses Ledger', headers, rows);
+      showToast('Opened printable report (Save as PDF)', 'success');
     }
   };
 
@@ -225,10 +254,19 @@ export default function ExpensesPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={handleExportCSV}
+            title="Download CSV spreadsheet file (for Excel / Google Sheets)"
             className="px-3 py-2 bg-[#FFFEFA] border border-[#E2DDD1] hover:bg-[#F5F2E9] text-[#193C49] text-xs font-medium rounded-lg flex items-center gap-1.5 transition-colors shadow-xs"
           >
             <Download className="w-3.5 h-3.5 text-[#71818A]" />
             <span>Export {activeTab === 'fuel' ? 'Fuel CSV' : 'Expenses CSV'}</span>
+          </button>
+          <button
+            onClick={handleExportPDF}
+            title="Open Printable Report / Save as PDF (for Adobe Acrobat / Print)"
+            className="px-3 py-2 bg-[#FFFEFA] border border-[#E2DDD1] hover:bg-[#F5F2E9] text-[#193C49] text-xs font-medium rounded-lg flex items-center gap-1.5 transition-colors shadow-xs"
+          >
+            <Printer className="w-3.5 h-3.5 text-[#71818A]" />
+            <span>PDF / Print</span>
           </button>
 
           {activeTab === 'fuel' ? (

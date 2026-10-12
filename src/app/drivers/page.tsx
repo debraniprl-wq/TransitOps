@@ -13,6 +13,7 @@ import {
   RefreshCw,
   AlertTriangle,
   Download,
+  Printer,
   Shield,
 } from 'lucide-react';
 import { AppShell } from '@/components/layout/AppShell';
@@ -21,7 +22,7 @@ import { Modal } from '@/components/ui/Modal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useToast } from '@/components/ui/Toast';
 import { DataProvider } from '@/lib/data-provider';
-import { exportToCSV } from '@/lib/calculations';
+import { exportToCSV, exportToPrintOrPDF } from '@/lib/calculations';
 import { Driver, DriverStatus, DriverLicenseCategory } from '@/types';
 
 export default function DriversPage() {
@@ -229,7 +230,22 @@ export default function DriversPage() {
       d.status,
     ]);
     exportToCSV('TransitOps_Drivers_Export', headers, rows);
-    showToast('Drivers CSV downloaded', 'success');
+    showToast('Drivers CSV exported (open with Excel / Sheets)', 'success');
+  };
+
+  const handleExportPDF = () => {
+    const headers = ['Name', 'License Number', 'Category', 'License Expiry', 'Contact Number', 'Safety Score', 'Status'];
+    const rows = filteredAndSortedDrivers.map((d) => [
+      d.name,
+      d.license_number,
+      d.license_category,
+      d.license_expiry,
+      d.contact_number,
+      `${d.safety_score}%`,
+      d.status,
+    ]);
+    exportToPrintOrPDF('Driver Roster & Licensing Registry', headers, rows);
+    showToast('Opened printable report (Save as PDF)', 'success');
   };
 
   return (
@@ -248,10 +264,19 @@ export default function DriversPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={handleExportCSV}
+            title="Download CSV spreadsheet file (for Excel / Google Sheets)"
             className="px-3 py-2 bg-[#FFFEFA] border border-[#E2DDD1] hover:bg-[#F5F2E9] text-[#193C49] text-xs font-medium rounded-lg flex items-center gap-1.5 transition-colors shadow-xs"
           >
             <Download className="w-3.5 h-3.5 text-[#71818A]" />
             <span>Export CSV</span>
+          </button>
+          <button
+            onClick={handleExportPDF}
+            title="Open Printable Report / Save as PDF (for Adobe Acrobat / Print)"
+            className="px-3 py-2 bg-[#FFFEFA] border border-[#E2DDD1] hover:bg-[#F5F2E9] text-[#193C49] text-xs font-medium rounded-lg flex items-center gap-1.5 transition-colors shadow-xs"
+          >
+            <Printer className="w-3.5 h-3.5 text-[#71818A]" />
+            <span>PDF / Print</span>
           </button>
           <button
             onClick={handleOpenAdd}
