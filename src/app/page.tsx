@@ -20,6 +20,7 @@ import {
   Layers,
   MapPin,
   TrendingUp,
+  Printer,
 } from 'lucide-react';
 import { AppShell } from '@/components/layout/AppShell';
 import { KPICard } from '@/components/dashboard/KPICard';
@@ -29,7 +30,7 @@ import { ExpenseStackedChart } from '@/components/dashboard/ExpenseStackedChart'
 import { RouteOverviewMap } from '@/components/dashboard/RouteOverviewMap';
 import { QuickActionsModal, QuickActionType } from '@/components/dashboard/QuickActionsModal';
 import { DataProvider } from '@/lib/data-provider';
-import { exportToCSV } from '@/lib/calculations';
+import { exportToCSV, exportToPrintOrPDF } from '@/lib/calculations';
 import { useAuth } from '@/lib/auth-context';
 import { useToast } from '@/components/ui/Toast';
 import { Vehicle, Driver, Trip, FuelLog, Expense } from '@/types';
@@ -410,7 +411,53 @@ function DashboardContent() {
 
     const filename = `TransitOps_Dashboard_${filterRegion}_${filterType}_${dateRange}`;
     exportToCSV(filename, headers, rows);
-    showToast(`Exported ${filteredVehicles.length} vehicle operational records to CSV`, 'success');
+    showToast(`Exported ${filteredVehicles.length} records to CSV (open with Excel)`, 'success');
+  };
+
+  // ── PDF / Print Report handler ──────────────────────────────────────────────
+  const handleExportPDF = () => {
+    const headers = [
+      'Registration',
+      'Model',
+      'Type',
+      'Region',
+      'Status',
+      'Odometer (km)',
+      'Max Capacity (kg)',
+      'Trips',
+      'Fuel (L)',
+      'Expenses ($)',
+    ];
+
+    const rows = filteredVehicles.map((v) => {
+      const vTrips = filteredTrips.filter((t) => t.vehicle_id === v.id).length;
+      const vFuel = filteredFuelLogs
+        .filter((f) => f.vehicle_id === v.id)
+        .reduce((sum, f) => sum + f.litres, 0);
+      const vExp = filteredExpenses
+        .filter((e) => e.vehicle_id === v.id)
+        .reduce((sum, e) => sum + e.amount, 0);
+
+      return [
+        v.reg_number,
+        v.model,
+        v.type,
+        v.region,
+        v.status,
+        v.odometer_km.toLocaleString(),
+        v.max_capacity_kg.toLocaleString(),
+        vTrips,
+        Math.round(vFuel),
+        `$${vExp.toFixed(2)}`,
+      ];
+    });
+
+    exportToPrintOrPDF(
+      `Operations Summary (${filterRegion} / ${filterType} / ${dateRange})`,
+      headers,
+      rows
+    );
+    showToast('Opened printable report (Save as PDF)', 'success');
   };
 
   // ── Smooth fade state helper ───────────────────────────────────────────────
@@ -438,10 +485,20 @@ function DashboardContent() {
             <button
               onClick={handleExportCSV}
               disabled={loading || filteredVehicles.length === 0}
+              title="Download CSV spreadsheet file (for Excel / Google Sheets)"
               className="px-3 py-2 bg-[#FFFEFA] border border-[#E2DDD1] hover:bg-[#F5F2E9] text-[#193C49] text-xs font-medium rounded-lg flex items-center gap-1.5 transition-all duration-200 shadow-xs active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Download className="w-3.5 h-3.5 text-[#71818A]" />
               <span className="hidden sm:inline">Export CSV</span>
+            </button>
+            <button
+              onClick={handleExportPDF}
+              disabled={loading || filteredVehicles.length === 0}
+              title="Open Printable Report / Save as PDF (for Adobe Acrobat / Print)"
+              className="px-3 py-2 bg-[#FFFEFA] border border-[#E2DDD1] hover:bg-[#F5F2E9] text-[#193C49] text-xs font-medium rounded-lg flex items-center gap-1.5 transition-all duration-200 shadow-xs active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <Printer className="w-3.5 h-3.5 text-[#71818A]" />
+              <span className="hidden sm:inline">PDF / Print</span>
             </button>
             <button
               onClick={loadData}

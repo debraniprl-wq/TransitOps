@@ -14,6 +14,7 @@ import {
   RefreshCw,
   Archive,
   Download,
+  Printer,
 } from 'lucide-react';
 import { AppShell } from '@/components/layout/AppShell';
 import { StatusBadge } from '@/components/ui/StatusBadge';
@@ -21,7 +22,7 @@ import { Modal } from '@/components/ui/Modal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useToast } from '@/components/ui/Toast';
 import { DataProvider } from '@/lib/data-provider';
-import { exportToCSV } from '@/lib/calculations';
+import { exportToCSV, exportToPrintOrPDF } from '@/lib/calculations';
 import { Vehicle, VehicleType, VehicleRegion, VehicleStatus } from '@/types';
 
 export default function VehiclesPage() {
@@ -225,7 +226,32 @@ export default function VehiclesPage() {
       v.status,
     ]);
     exportToCSV('TransitOps_Vehicles_Export', headers, rows);
-    showToast('Vehicles CSV downloaded', 'success');
+    showToast('Vehicles CSV exported (open with Excel / Sheets)', 'success');
+  };
+
+  const handleExportPDF = () => {
+    const headers = [
+      'Registration',
+      'Model',
+      'Type',
+      'Capacity (kg)',
+      'Odometer (km)',
+      'Acquisition ($)',
+      'Region',
+      'Status',
+    ];
+    const rows = filteredAndSortedVehicles.map((v) => [
+      v.reg_number,
+      v.model,
+      v.type,
+      v.max_capacity_kg.toLocaleString(),
+      v.odometer_km.toLocaleString(),
+      `$${v.acquisition_cost.toLocaleString()}`,
+      v.region,
+      v.status,
+    ]);
+    exportToPrintOrPDF('Fleet Vehicles Registry', headers, rows);
+    showToast('Opened printable report (Save as PDF)', 'success');
   };
 
   return (
@@ -244,10 +270,19 @@ export default function VehiclesPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={handleExportCSV}
+            title="Download CSV spreadsheet file (for Excel / Google Sheets)"
             className="px-3 py-2 bg-[#FFFEFA] border border-[#E2DDD1] hover:bg-[#F5F2E9] text-[#193C49] text-xs font-medium rounded-lg flex items-center gap-1.5 transition-colors shadow-xs"
           >
             <Download className="w-3.5 h-3.5 text-[#71818A]" />
             <span>Export CSV</span>
+          </button>
+          <button
+            onClick={handleExportPDF}
+            title="Open Printable Report / Save as PDF (for Adobe Acrobat / Print)"
+            className="px-3 py-2 bg-[#FFFEFA] border border-[#E2DDD1] hover:bg-[#F5F2E9] text-[#193C49] text-xs font-medium rounded-lg flex items-center gap-1.5 transition-colors shadow-xs"
+          >
+            <Printer className="w-3.5 h-3.5 text-[#71818A]" />
+            <span>PDF / Print</span>
           </button>
           <button
             onClick={handleOpenAdd}

@@ -129,7 +129,7 @@ export function computeFleetAnalytics(
   };
 }
 
-// RFC-4180 Compliant CSV Exporter
+// RFC-4180 Compliant CSV Exporter with UTF-8 BOM for Windows & Excel
 export function exportToCSV(filename: string, headers: string[], rows: (string | number | null | undefined)[][]): void {
   const escapeCell = (cell: string | number | null | undefined) => {
     if (cell === null || cell === undefined) return '""';
@@ -142,7 +142,8 @@ export function exportToCSV(filename: string, headers: string[], rows: (string |
     ...rows.map((row) => row.map(escapeCell).join(',')),
   ].join('\r\n');
 
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  // \uFEFF Byte Order Mark ensures Microsoft Excel and spreadsheet tools recognize UTF-8 encoding
+  const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
   const url = URL.createObjectURL(blob);
   link.setAttribute('href', url);
@@ -151,4 +152,61 @@ export function exportToCSV(filename: string, headers: string[], rows: (string |
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+// Print / PDF Report Generator for direct viewing or printing
+export function exportToPrintOrPDF(title: string, headers: string[], rows: (string | number | null | undefined)[][]): void {
+  if (typeof window === 'undefined') return;
+  const printWindow = window.open('', '_blank');
+  if (!printWindow) return;
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>${title}</title>
+        <meta charset="utf-8" />
+        <style>
+          body { font-family: system-ui, -apple-system, sans-serif; padding: 28px; color: #193C49; }
+          .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; border-bottom: 2px solid #23866D; padding-bottom: 12px; }
+          h1 { margin: 0; font-size: 20px; color: #193C49; font-weight: 700; }
+          .meta { font-size: 11px; color: #71818A; margin-top: 4px; }
+          .badge { background: #E8F5F1; color: #1E735E; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; }
+          table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 10px; }
+          th { background: #F5F2E9; text-align: left; padding: 8px 10px; border: 1px solid #E2DDD1; font-weight: 600; color: #193C49; }
+          td { padding: 8px 10px; border: 1px solid #E2DDD1; color: #2D3748; }
+          tr:nth-child(even) { background: #FAF8F3; }
+          @media print {
+            body { padding: 12px; }
+            .no-print { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div>
+            <h1>TransitOps — ${title}</h1>
+            <div class="meta">Exported: ${new Date().toLocaleString()} · Fleet Telemetry System</div>
+          </div>
+          <div class="badge">Official Report</div>
+        </div>
+        <table>
+          <thead>
+            <tr>${headers.map((h) => `<th>${h}</th>`).join('')}</tr>
+          </thead>
+          <tbody>
+            ${rows.map((r) => `<tr>${r.map((c) => `<td>${c ?? ''}</td>`).join('')}</tr>`).join('')}
+          </tbody>
+        </table>
+        <script>
+          window.onload = function() {
+            setTimeout(function() { window.print(); }, 250);
+          };
+        </script>
+      </body>
+    </html>
+  `;
+  printWindow.document.write(html);
+  printWindow.document.close();
 }

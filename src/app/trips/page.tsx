@@ -13,6 +13,7 @@ import {
   Eye,
   RefreshCw,
   Download,
+  Printer,
   Truck,
   User,
   MapPin,
@@ -25,7 +26,7 @@ import { Modal } from '@/components/ui/Modal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useToast } from '@/components/ui/Toast';
 import { DataProvider } from '@/lib/data-provider';
-import { exportToCSV } from '@/lib/calculations';
+import { exportToCSV, exportToPrintOrPDF } from '@/lib/calculations';
 import { Trip, Vehicle, Driver, TripStatus } from '@/types';
 
 export default function TripsPage() {
@@ -265,7 +266,36 @@ export default function TripsPage() {
       t.status,
     ]);
     exportToCSV('TransitOps_Trips_Manifest', headers, rows);
-    showToast('Trips CSV exported', 'success');
+    showToast('Trips CSV exported (open with Excel / Sheets)', 'success');
+  };
+
+  const handleExportPDF = () => {
+    const headers = [
+      'Trip Code',
+      'Source',
+      'Destination',
+      'Planned Dist (km)',
+      'Payload (kg)',
+      'Vehicle',
+      'Driver',
+      'Departure',
+      'Revenue ($)',
+      'Status',
+    ];
+    const rows = filteredAndSortedTrips.map((t) => [
+      t.trip_code,
+      t.source,
+      t.destination,
+      t.planned_distance_km.toLocaleString(),
+      t.cargo_weight_kg.toLocaleString(),
+      t.vehicle ? `${t.vehicle.model} (${t.vehicle.reg_number})` : 'Unassigned',
+      t.driver ? t.driver.name : 'Unassigned',
+      new Date(t.planned_departure).toLocaleDateString(),
+      t.revenue ? `$${t.revenue.toLocaleString()}` : '$0',
+      t.status,
+    ]);
+    exportToPrintOrPDF('Trips & Dispatch Manifests', headers, rows);
+    showToast('Opened printable report (Save as PDF)', 'success');
   };
 
   return (
@@ -284,10 +314,19 @@ export default function TripsPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={handleExportCSV}
+            title="Download CSV spreadsheet file (for Excel / Google Sheets)"
             className="px-3 py-2 bg-[#FFFEFA] border border-[#E2DDD1] hover:bg-[#F5F2E9] text-[#193C49] text-xs font-medium rounded-lg flex items-center gap-1.5 transition-colors shadow-xs"
           >
             <Download className="w-3.5 h-3.5 text-[#71818A]" />
             <span>Export CSV</span>
+          </button>
+          <button
+            onClick={handleExportPDF}
+            title="Open Printable Report / Save as PDF (for Adobe Acrobat / Print)"
+            className="px-3 py-2 bg-[#FFFEFA] border border-[#E2DDD1] hover:bg-[#F5F2E9] text-[#193C49] text-xs font-medium rounded-lg flex items-center gap-1.5 transition-colors shadow-xs"
+          >
+            <Printer className="w-3.5 h-3.5 text-[#71818A]" />
+            <span>PDF / Print</span>
           </button>
           <button
             onClick={() => setIsCreateOpen(true)}
