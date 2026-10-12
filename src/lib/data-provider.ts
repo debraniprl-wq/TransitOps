@@ -26,15 +26,15 @@ import {
 import { getSupabaseClient, isSupabaseConfigured } from './supabase';
 
 const STORAGE_KEYS = {
-  VEHICLES: 'transitops_vehicles_v2',
-  DRIVERS: 'transitops_drivers_v2',
-  TRIPS: 'transitops_trips_v2',
-  MAINTENANCE: 'transitops_maintenance_v2',
-  FUEL: 'transitops_fuel_v2',
-  EXPENSES: 'transitops_expenses_v2',
-  NOTIFICATIONS: 'transitops_notifications_v2',
-  SETTINGS: 'transitops_settings_v2',
-  PROFILES: 'transitops_profiles_v2',
+  VEHICLES: 'transitops_vehicles_v3',
+  DRIVERS: 'transitops_drivers_v3',
+  TRIPS: 'transitops_trips_v3',
+  MAINTENANCE: 'transitops_maintenance_v3',
+  FUEL: 'transitops_fuel_v3',
+  EXPENSES: 'transitops_expenses_v3',
+  NOTIFICATIONS: 'transitops_notifications_v3',
+  SETTINGS: 'transitops_settings_v3',
+  PROFILES: 'transitops_profiles_v3',
 };
 
 // Safe LocalStorage helpers
@@ -84,7 +84,13 @@ export class DataProvider {
         if (!error && data && data.length > 0) return data as Vehicle[];
       }
     }
-    return readStorage<Vehicle[]>(STORAGE_KEYS.VEHICLES, INITIAL_VEHICLES);
+    const list = readStorage<Vehicle[]>(STORAGE_KEYS.VEHICLES, INITIAL_VEHICLES);
+    // If client storage contains an older seed dataset with missing statuses, upgrade cleanly
+    if (!list || list.length < 15) {
+      this.resetToSeedData();
+      return INITIAL_VEHICLES;
+    }
+    return list;
   }
 
   static async getVehicleById(id: string): Promise<Vehicle | null> {

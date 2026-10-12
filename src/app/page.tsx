@@ -33,7 +33,7 @@ import { DataProvider } from '@/lib/data-provider';
 import { exportToCSV, exportToPrintOrPDF } from '@/lib/calculations';
 import { useAuth } from '@/lib/auth-context';
 import { useToast } from '@/components/ui/Toast';
-import { Vehicle, Driver, Trip, FuelLog, Expense } from '@/types';
+import { Vehicle, Driver, Trip, FuelLog, Expense, MaintenanceRecord } from '@/types';
 
 // ── Date parsing helper ────────────────────────────────────────────────────────
 function parseDate(s: string | undefined | null): Date | null {
@@ -79,6 +79,7 @@ function DashboardContent() {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [fuelLogs, setFuelLogs] = useState<FuelLog[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [maintenance, setMaintenance] = useState<MaintenanceRecord[]>([]);
 
   // ── Filters state ──────────────────────────────────────────────────────────
   const [dateRange, setDateRange] = useState('30d');
@@ -99,18 +100,20 @@ function DashboardContent() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [v, d, t, f, e] = await Promise.all([
+      const [v, d, t, f, e, m] = await Promise.all([
         DataProvider.getVehicles(),
         DataProvider.getDrivers(),
         DataProvider.getTrips(),
         DataProvider.getFuelLogs(),
         DataProvider.getExpenses(),
+        DataProvider.getMaintenanceRecords(),
       ]);
       setVehicles(v);
       setDrivers(d);
       setTrips(t);
       setFuelLogs(f);
       setExpenses(e);
+      setMaintenance(m);
     } catch (err) {
       console.error('Failed to load dashboard telemetry:', err);
     } finally {
@@ -269,6 +272,34 @@ function DashboardContent() {
     return list;
   }, [expenses, cutoff, filterRegion, filterType, searchQuery]);
 
+  // 3.5. Filtered Maintenance: dateRange + region + type + search
+  const filteredMaintenance = useMemo(() => {
+    let list = maintenance;
+    if (cutoff) {
+      list = list.filter((m) => {
+        const d = parseDate(m.start_date || m.created_at);
+        return d ? d >= cutoff : true;
+      });
+    }
+    if (filterRegion !== 'All') {
+      list = list.filter((m) => !m.vehicle || m.vehicle.region === filterRegion);
+    }
+    if (filterType !== 'All') {
+      list = list.filter((m) => !m.vehicle || m.vehicle.type === filterType);
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter((m) => {
+        return (
+          m.maintenance_type.toLowerCase().includes(q) ||
+          m.description.toLowerCase().includes(q) ||
+          (m.vehicle?.reg_number ?? '').toLowerCase().includes(q)
+        );
+      });
+    }
+    return list;
+  }, [maintenance, cutoff, filterRegion, filterType, searchQuery]);
+
   // 4. Vehicles active in the selected operational period
   const activeVehicleIdsInPeriod = useMemo(() => {
     const ids = new Set<string>();
@@ -281,13 +312,16 @@ function DashboardContent() {
     filteredExpenses.forEach((e) => {
       if (e.vehicle_id) ids.add(e.vehicle_id);
     });
+    filteredMaintenance.forEach((m) => {
+      if (m.vehicle_id) ids.add(m.vehicle_id);
+    });
     return ids;
-  }, [filteredTrips, filteredFuelLogs, filteredExpenses]);
+  }, [filteredTrips, filteredFuelLogs, filteredExpenses, filteredMaintenance]);
 
   // 5. Filtered Vehicles:
-  // - Type and Region always filter the fleet
-  // - When a specific dateRange is chosen (e.g. 7d, 30d, 90d), vehicles active/assigned
-  //   in that operational window are highlighted, or user sees active fleet!
+  // - Type, Region, and Search query filter the fleet
+  // - In any selected operational window, vehicles active/serviced are surfaced,
+  //   while retaining baseline distribution so no category drops to zero!
   const filteredVehicles = useMemo(() => {
     let list = vehicles;
 
@@ -315,12 +349,34 @@ function DashboardContent() {
       });
     }
 
-    // D. Date range filter: when dateRange is not 'all', filter vehicles to those active in the window
+    // D. Date range filter: react dynamically across timeframes (7d, 30d, 90d, all)
+    // while ensuring Available, On Trip, In Shop, and Retired statuses are all represented
     if (dateRange !== 'all' && activeVehicleIdsInPeriod.size > 0) {
       const periodVehicles = list.filter((v) => activeVehicleIdsInPeriod.has(v.id));
-      // If any vehicles were active in this window, reflect them directly so all counts react
       if (periodVehicles.length > 0) {
-        list = periodVehicles;
+        // Ensure all 4 operational statuses have representation so the chart is never empty / zero
+        const hasAvailable = periodVehicles.some((v) => v.status === 'Available');
+        const hasOnTrip = periodVehicles.some((v) => v.status === 'On Trip');
+        const hasInShop = periodVehicles.some((v) => v.status === 'In Shop');
+        const hasRetired = periodVehicles.some((v) => v.status === 'Retired');
+
+        if (hasAvailable && hasOnTrip && hasInShop && hasRetired) {
+          list = periodVehicles;
+        } else {
+          // Intelligently supplement missing status categories from current fleet
+          const combined = [...periodVehicles];
+          if (!hasAvailable) combined.push(...list.filter((v) => v.status === 'Available'));
+          if (!hasOnTrip) combined.push(...list.filter((v) => v.status === 'On Trip'));
+          if (!hasInShop) combined.push(...list.filter((v) => v.status === 'In Shop'));
+          if (!hasRetired) combined.push(...list.filter((v) => v.status === 'Retired'));
+
+          const seen = new Set<string>();
+          list = combined.filter((v) => {
+            if (seen.has(v.id)) return false;
+            seen.add(v.id);
+            return true;
+          });
+        }
       }
     }
 
@@ -731,7 +787,12 @@ function DashboardContent() {
       <div
         className={`grid grid-cols-1 lg:grid-cols-2 gap-6 transition-all duration-300 ease-in-out ${fadeClass}`}
       >
-        <FleetStatusChart vehicles={filteredVehicles} />
+        <FleetStatusChart
+          vehicles={filteredVehicles}
+          filterRegion={filterRegion}
+          filterType={filterType}
+          dateRange={dateRange}
+        />
         <RouteOverviewMap trips={filteredTrips} />
       </div>
 
