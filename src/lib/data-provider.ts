@@ -26,15 +26,15 @@ import {
 import { getSupabaseClient, isSupabaseConfigured } from './supabase';
 
 const STORAGE_KEYS = {
-  VEHICLES: 'transitops_vehicles_v1',
-  DRIVERS: 'transitops_drivers_v1',
-  TRIPS: 'transitops_trips_v1',
-  MAINTENANCE: 'transitops_maintenance_v1',
-  FUEL: 'transitops_fuel_v1',
-  EXPENSES: 'transitops_expenses_v1',
-  NOTIFICATIONS: 'transitops_notifications_v1',
-  SETTINGS: 'transitops_settings_v1',
-  PROFILES: 'transitops_profiles_v1',
+  VEHICLES: 'transitops_vehicles_v2',
+  DRIVERS: 'transitops_drivers_v2',
+  TRIPS: 'transitops_trips_v2',
+  MAINTENANCE: 'transitops_maintenance_v2',
+  FUEL: 'transitops_fuel_v2',
+  EXPENSES: 'transitops_expenses_v2',
+  NOTIFICATIONS: 'transitops_notifications_v2',
+  SETTINGS: 'transitops_settings_v2',
+  PROFILES: 'transitops_profiles_v2',
 };
 
 // Safe LocalStorage helpers
