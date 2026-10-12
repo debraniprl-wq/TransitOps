@@ -1,0 +1,61 @@
+@import "tailwindcss";
+
+:root {
+  --sidebar-bg: #123B38;
+  --sidebar-hover: #194E4A;
+  --sidebar-active: #1D5854;
+  --sidebar-border: #1B4C48;
+  --sidebar-text: #E5EFEA;
+  --sidebar-muted: #8EABA3;
+  --bg-main: #F5F2E9;
+  --card-bg: #FFFEFA;
+  --accent-primary: #23866D;
+  --accent-hover: #1D735D;
+  --accent-sage: #A9CDBA;
+  --info: #4F91D8;
+  --warning: #E9A23B;
+  --danger: #D95353;
+  --text-main: #193C49;
+  --text-muted: #71818A;
+  --border-subtle: #E2DDD1;
+  --border-strong: #CDC6B8;
+}
+
+body {
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom subtle scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #D2CBC0;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #B6AEA2;
+}
+
+/* Subtle transitions */
+button, a, input, select {
+  transition: all 0.15s ease-in-out;
+}
+
+/* Print styling */
+@media print {
+  aside, nav, button {
+    display: none !important;
+  }
+}
